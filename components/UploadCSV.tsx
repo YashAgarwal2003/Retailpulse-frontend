@@ -85,7 +85,7 @@ const UploadCSV: React.FC = () => {
         {forecastData.length > 0 && (
           <div className="h-96 mt-6">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart>
+              <LineChart data={forecastData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -94,23 +94,27 @@ const UploadCSV: React.FC = () => {
                 {/* History line */}
                 <Line
                   type="monotone"
-                  data={forecastData.filter((d) => d.type === "history")}
                   dataKey="sales"
                   stroke="#2563eb"
                   name="History"
                   dot={false}
                   strokeWidth={2}
+                  connectNulls
+                  isAnimationActive={false}
+                  data={forecastData.filter((d) => d.type === "history")}
                 />
                 {/* Forecast line */}
                 <Line
                   type="monotone"
-                  data={forecastData.filter((d) => d.type === "forecast")}
                   dataKey="sales"
                   stroke="#f97316"
                   name="Forecast"
                   dot={false}
                   strokeWidth={2}
                   strokeDasharray="5 5"
+                  connectNulls
+                  isAnimationActive={false}
+                  data={forecastData.filter((d) => d.type === "forecast")}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -122,5 +126,3 @@ const UploadCSV: React.FC = () => {
 };
 
 export default UploadCSV;
-
-
