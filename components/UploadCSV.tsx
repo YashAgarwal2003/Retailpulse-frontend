@@ -1,61 +1,130 @@
 "use client";
-import { useState } from "react";
-import ForecastChart from "./ForecastChart";
 
-export default function UploadCSV() {
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+interface ForecastData {
+  date: string;
+  sales: number;
+  type: "history" | "forecast";
+}
+
+const UploadCSV: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState("");
-  const [forecast, setForecast] = useState<{ history: any; forecast: any } | null>(null);
+  const [forecastData, setForecastData] = useState<ForecastData[]>([]);
+  const [status, setStatus] = useState<string>("");
 
-  const upload = async () => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!file) {
-      setStatus("No file selected");
+      setStatus("Please select a CSV file first.");
       return;
     }
-    console.log("Sending request to:", `${process.env.NEXT_PUBLIC_API_BASE}/forecast/`);
-    setStatus("Uploading...");
-    const form = new FormData();
-    form.append("file", file);
 
-    
+    const formData = new FormData();
+    formData.append("file", file);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/forecast/`, {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setForecast(data);
-        setStatus(`Forecast generated ✅`);
-      } else {
-        setStatus(`Error: ${data.detail}`);
+      setStatus("Uploading...");
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE}/forecast/`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
-    } catch (err) {
+
+      const result: ForecastData[] = await response.json();
+      setForecastData(result);
+      setStatus("Forecast generated ✅");
+    } catch (error: unknown) {
+      console.error("Upload failed:", error);
       setStatus("Upload failed ❌");
     }
   };
 
   return (
-    <div className="p-6 border rounded-xl bg-white shadow-md space-y-4">
-      <h2 className="text-xl font-semibold">Upload Transactions CSV</h2>
-      <input
-        type="file"
-        accept=".csv"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
-        className="block w-full"
-      />
-      <button
-        onClick={upload}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        Upload & Forecast
-      </button>
-      <p className="text-gray-600">{status}</p>
+    <Card className="p-4">
+      <CardHeader>
+        <CardTitle>Upload Sales CSV</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="block w-full"
+          />
+          <Button type="submit">Upload & Forecast</Button>
+        </form>
+        {status && <p className="mt-2 text-sm">{status}</p>}
 
-      {forecast && (
-        <ForecastChart history={forecast.history} forecast={forecast.forecast} />
-      )}
-    </div>
+        {forecastData.length > 0 && (
+          <div className="h-96 mt-6">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={forecastData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#2563eb"
+                  name="History"
+                  dot={false}
+                  isAnimationActive={false}
+                  strokeDasharray=""
+                  connectNulls
+                  legendType="line"
+                  strokeWidth={2}
+                  filter={(d: ForecastData) => d.type === "history"}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#f97316"
+                  name="Forecast"
+                  dot={false}
+                  isAnimationActive={false}
+                  strokeDasharray="5 5"
+                  connectNulls
+                  legendType="line"
+                  strokeWidth={2}
+                  filter={(d: ForecastData) => d.type === "forecast"}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default UploadCSV;
+
